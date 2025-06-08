@@ -5,11 +5,12 @@ from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import matplotlib.pyplot as plt
+import joblib
+import io
 
-st.title('ThinkForge - Decision Trees')
+st.title('Tensora Labs - Decision Trees')
 st.write('Where ideas are built.')
 
-# Session state initialization
 if 'model' not in st.session_state:
     st.session_state.model = None
 if 'X_columns' not in st.session_state:
@@ -17,7 +18,6 @@ if 'X_columns' not in st.session_state:
 if 'target_categories' not in st.session_state:
     st.session_state.target_categories = None
 
-# Upload CSV
 file = st.file_uploader("Upload a CSV File", type='.csv')
 if file:
     df = pd.read_csv(file).dropna()
@@ -31,9 +31,8 @@ if file:
         X = df[features]
         y = df[target]
 
-        # Encode categorical variables if needed
         X_enc = pd.get_dummies(X)
-        X_columns = X_enc.columns.tolist()  # Store the columns for later use
+        X_columns = X_enc.columns.tolist()
         st.session_state.X_columns = X_columns
 
         if y.dtype == 'object':
@@ -41,7 +40,6 @@ if file:
             y = pd.factorize(y)[0]
             st.session_state.target_categories = target_categories
 
-        # Train-test split
         X_train, X_test, y_train, y_test = train_test_split(X_enc, y, test_size=0.3, random_state=42)
         model = DecisionTreeClassifier(max_depth=depth)
         model.fit(X_train, y_train)
@@ -49,6 +47,17 @@ if file:
 
         acc = accuracy_score(y_test, model.predict(X_test))
         st.success(f"Model Accuracy: {acc:.2f}")
+
+        model_buffer = io.BytesIO()
+        joblib.dump(model, model_buffer)
+        model_buffer.seek(0)
+
+        st.download_button(
+            label="Download Trained Model",
+            data=model_buffer,
+            file_name="decision_tree_model.pkl",
+            mime="application/octet-stream"
+        )
 
         st.subheader("Decision Tree")
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -59,11 +68,9 @@ if file:
         importance = pd.DataFrame({'Feature': X_enc.columns, 'Importance': model.feature_importances_})
         st.bar_chart(importance.set_index('Feature').sort_values('Importance', ascending=False))
 
-# Prediction part, only runs when model is trained
 if st.session_state.model:
     st.header("Make Predictions")
 
-    # Simple input fields for each feature (numeric or categorical)
     user_input = {}
     for feature in features:
         if pd.api.types.is_numeric_dtype(df[feature]):
@@ -71,7 +78,6 @@ if st.session_state.model:
         else:
             user_input[feature] = st.selectbox(f"Select {feature}:", df[feature].unique())
 
-    # Predict on button click
     if st.button("Predict"):
         input_df = pd.DataFrame([user_input])
         input_enc = pd.get_dummies(input_df).reindex(columns=st.session_state.X_columns, fill_value=0)
