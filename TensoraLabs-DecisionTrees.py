@@ -9,7 +9,7 @@ import joblib
 import io
 
 st.title('Tensora Labs - Decision Trees')
-st.write('Where ideas are built.')
+st.write('No-Code Platform for Advanced AI')
 
 if 'model' not in st.session_state:
     st.session_state.model = None
